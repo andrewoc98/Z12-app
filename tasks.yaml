@@ -1,0 +1,281 @@
+# One entry per numbered task in plan.md (Section 7).
+#
+# Fields:
+#   id        - task number from plan.md (for commit messages / resuming)
+#   phase     - human label, matches plan.md phase headings
+#   manual    - true if this step needs a human (device in hand, browser DevTools, a
+#               Firebase console, etc.) — run.sh will pause instead of calling Aider
+#   files     - files to /add for this task (created if missing). Keep this list narrow;
+#               a 7B model reasons much worse with a big file set in context.
+#   prompt    - the instruction sent to Aider. Deliberately short and scoped to ONE task.
+#   verify    - shell command run after Aider finishes; non-zero exit = task failed,
+#               run.sh reverts the working tree and stops.
+
+tasks:
+  - id: 1
+    phase: "Phase 0 - Repo audit"
+    manual: false
+    files: ["NOTES.md"]
+    prompt: >
+      Read the current repo layout (ls -R style) and any existing package.json files.
+      Append a "## Repo audit" section to NOTES.md summarizing: existing structure,
+      whether a Capacitor/Ionic config already exists, and package manager in use.
+      Do not modify any other file.
+    verify: "test -f NOTES.md && grep -q '## Repo audit' NOTES.md"
+
+  - id: 2
+    phase: "Phase 0 - Repo audit"
+    manual: true
+    prompt: >
+      MANUAL STEP: Log into z12challenge.com in a real browser, open DevTools > Network,
+      browse around, and note whether any XHR/fetch calls hit a JSON API. Confirm the
+      exact live URL (e.g. https://www.z12challenge.com vs no-www).
+      Add findings to NOTES.md under "## API findings" yourself, or paste them when
+      prompted and this script will append them for you.
+    verify: "grep -q '## API findings' NOTES.md"
+
+  - id: 3
+    phase: "Phase 1 - Capacitor scaffold"
+    manual: false
+    files: ["app/package.json", "app/capacitor.config.ts"]
+    prompt: >
+      If app/ does not already contain a Capacitor project, scaffold a minimal one
+      (package.json with @capacitor/core, @capacitor/cli, @capacitor/android,
+      @capacitor/ios as deps) targeting Android and iOS. Do not add Ionic UI components.
+    verify: "test -f app/package.json"
+
+  - id: 4
+    phase: "Phase 1 - Capacitor scaffold"
+    manual: false
+    files: ["app/capacitor.config.ts"]
+    prompt: >
+      Configure app/capacitor.config.ts so server.url loads the site URL confirmed in
+      NOTES.md's API findings section (fall back to https://www.z12challenge.com if
+      unconfirmed), with server.cleartext left false.
+    verify: "grep -q 'z12challenge.com' app/capacitor.config.ts"
+
+  - id: 5
+    phase: "Phase 1 - Capacitor scaffold"
+    manual: true
+    prompt: >
+      MANUAL STEP (needs Android SDK / emulator on this machine): run
+      `npx cap sync` then `npx cap run android` (or a CI-safe `./gradlew assembleDebug`)
+      inside app/ and confirm a clean build. Aider/this script cannot verify a real
+      device build headlessly.
+    verify: "true"
+
+  - id: 6
+    phase: "Phase 2 - Push plumbing"
+    manual: false
+    files: ["app/package.json"]
+    prompt: >
+      Add @capacitor/push-notifications as a dependency in app/package.json.
+    verify: "grep -q 'push-notifications' app/package.json"
+
+  - id: 7
+    phase: "Phase 2 - Push plumbing"
+    manual: false
+    files: ["app/src/notifications.ts"]
+    prompt: >
+      Implement app/src/notifications.ts: request push notification permission via
+      @capacitor/push-notifications, obtain the FCM token, and POST it plus the
+      detected role (imported from bridge.ts, may be a TODO stub for now) to
+      `${BACKEND_URL}/register-device`. Use a BACKEND_URL constant with a
+      // TODO: set real backend URL comment.
+    verify: "test -f app/src/notifications.ts && grep -q 'register-device' app/src/notifications.ts"
+
+  - id: 8
+    phase: "Phase 2 - Push plumbing"
+    manual: true
+    prompt: >
+      MANUAL STEP: run the app on a real device or emulator with Google Play services
+      and confirm the OS permission prompt appears and a token is logged.
+    verify: "true"
+
+  - id: 9
+    phase: "Phase 3 - Role detection bridge"
+    manual: false
+    files: ["app/src/bridge.ts", "NOTES.md"]
+    prompt: >
+      Implement app/src/bridge.ts: after WebView load, inject a JS snippet that tries
+      to read the logged-in user's role from localStorage or a DOM selector. Since the
+      real selector/key is unconfirmed, use a clearly marked
+      `// TODO: confirm — see NOTES.md` placeholder selector, and export a
+      `detectRole(): string | null` function other modules can import.
+    verify: "test -f app/src/bridge.ts && grep -q 'detectRole' app/src/bridge.ts"
+
+  - id: 10
+    phase: "Phase 3 - Role detection bridge"
+    manual: false
+    files: ["app/src/bridge.ts"]
+    prompt: >
+      Extend app/src/bridge.ts so that once a role is detected, it subscribes the
+      device to a topic named `role_<role>` (e.g. role_rower) using
+      PushNotifications.subscribeToTopic if available in this Capacitor plugin
+      version, otherwise fall back to sending the role in the /register-device
+      POST body from notifications.ts so the backend manages topic membership.
+    verify: "grep -q 'role_' app/src/bridge.ts"
+
+  - id: 11
+    phase: "Phase 3 - Role detection bridge"
+    manual: true
+    prompt: >
+      MANUAL STEP: with a real or mocked rower-role login, confirm the device
+      registers with role "rower" (check backend logs / tokenStore once Phase 4
+      exists, or stub-log for now).
+    verify: "true"
+
+  - id: 12
+    phase: "Phase 4 - Backend scaffold"
+    manual: false
+    files: ["backend/package.json", "backend/src/index.ts"]
+    prompt: >
+      Scaffold backend/ as a minimal Express + TypeScript app: package.json with
+      express, typescript, ts-node, @types/express as deps, and a src/index.ts
+      that starts an Express server on process.env.PORT || 3000.
+    verify: "test -f backend/package.json && test -f backend/src/index.ts"
+
+  - id: 13
+    phase: "Phase 4 - Backend scaffold"
+    manual: false
+    files: ["backend/src/tokenStore.ts"]
+    prompt: >
+      Implement backend/src/tokenStore.ts: a simple JSON-file-backed store mapping
+      deviceToken -> role, with saveToken(token, role) and getTokensByRole(role)
+      functions. Keep it dependency-free (fs + JSON), no SQLite yet.
+    verify: "test -f backend/src/tokenStore.ts && grep -q 'saveToken' backend/src/tokenStore.ts"
+
+  - id: 14
+    phase: "Phase 4 - Backend scaffold"
+    manual: false
+    files: ["backend/src/index.ts", "backend/src/tokenStore.ts"]
+    prompt: >
+      Add a POST /register-device endpoint to backend/src/index.ts that reads
+      { token, role } from the JSON body and calls tokenStore.saveToken. Return 400
+      on missing fields, 204 on success.
+    verify: "grep -q 'register-device' backend/src/index.ts"
+
+  - id: 15
+    phase: "Phase 4 - Backend scaffold"
+    manual: true
+    prompt: >
+      MANUAL STEP: `cd backend && npm run build && npm start`, then in another shell
+      `curl -X POST localhost:3000/register-device -H 'Content-Type: application/json'
+      -d '{"token":"test","role":"rower"}'` and confirm a success response.
+    verify: "true"
+
+  - id: 16
+    phase: "Phase 5 - FCM sending"
+    manual: false
+    files: ["backend/src/fcm.ts", "backend/package.json"]
+    prompt: >
+      Add firebase-admin to backend/package.json and implement backend/src/fcm.ts
+      exporting sendToTopic(topic: string, payload: {title: string; body: string;
+      data?: Record<string,string>}) using firebase-admin's messaging().send with
+      a topic message. Initialize the admin app from a service account JSON path
+      read from process.env.FCM_SERVICE_ACCOUNT_JSON.
+    verify: "grep -q 'sendToTopic' backend/src/fcm.ts"
+
+  - id: 17
+    phase: "Phase 5 - FCM sending"
+    manual: false
+    files: ["backend/.env.example"]
+    prompt: >
+      Create backend/.env.example documenting FCM_SERVICE_ACCOUNT_JSON (path to the
+      service account key file) and PORT. Do not include any real credentials.
+    verify: "test -f backend/.env.example && grep -q 'FCM_SERVICE_ACCOUNT_JSON' backend/.env.example"
+
+  - id: 18
+    phase: "Phase 5 - FCM sending"
+    manual: true
+    prompt: >
+      MANUAL STEP: this needs a real Firebase project and service account key,
+      which only you can create. Set up the Firebase project, download the service
+      account JSON, point FCM_SERVICE_ACCOUNT_JSON at it locally, and run a manual
+      test script that calls sendToTopic against a test topic/device to confirm
+      delivery.
+    verify: "true"
+
+  - id: 19
+    phase: "Phase 6 - Event watcher"
+    manual: false
+    files: ["backend/src/watcher.ts", "backend/package.json"]
+    prompt: >
+      Implement backend/src/watcher.ts. Read NOTES.md's "## API findings" section
+      conceptually: if a real JSON API was confirmed, poll it directly for events;
+      otherwise fetch the events page HTML server-side (add "cheerio" to
+      backend/package.json) and parse event entries. Either path must persist a
+      last-seen-event-id (JSON file) and only treat IDs newer than that as new,
+      updating the persisted value after processing. Export a checkForNewEvents()
+      function designed so additional event-type detectors can be added later
+      without hardcoding a single check.
+    verify: "test -f backend/src/watcher.ts && grep -q 'checkForNewEvents' backend/src/watcher.ts"
+
+  - id: 20
+    phase: "Phase 6 - Event watcher"
+    manual: false
+    files: ["backend/src/watcher.ts", "backend/src/fcm.ts"]
+    prompt: >
+      Wire watcher.ts so that when checkForNewEvents() finds a new event, it calls
+      fcm.sendToTopic("role_rower", {...}) using the payload shape from plan.md
+      Section 6 (title "New event", body "<event name> was just added", data with
+      type "event_created", eventId, eventUrl).
+    verify: "grep -q 'role_rower' backend/src/watcher.ts"
+
+  - id: 21
+    phase: "Phase 6 - Event watcher"
+    manual: false
+    files: ["backend/src/watcher.ts", "backend/test/watcher.fixture.html"]
+    prompt: >
+      Create a small HTML fixture file at backend/test/watcher.fixture.html
+      representing the events page with one "new" event injected, and a script
+      backend/test/watcher.manual-test.ts that runs checkForNewEvents() against
+      the fixture, asserts exactly one notification would fire, then runs it a
+      second time and asserts zero notifications fire (no re-notify).
+    verify: "test -f backend/test/watcher.fixture.html && test -f backend/test/watcher.manual-test.ts"
+
+  - id: 22
+    phase: "Phase 7 - End to end"
+    manual: true
+    prompt: >
+      MANUAL STEP: run the app (emulator) and backend locally together, register a
+      real test device, manually trigger the watcher (or edit the fixture / point it
+      at the live site), and confirm a real push notification arrives on-device.
+    verify: "true"
+
+  - id: 23
+    phase: "Phase 7 - End to end"
+    manual: false
+    files: ["README.md"]
+    prompt: >
+      Write/extend README.md documenting: how to build and run the app, how to
+      deploy the backend, and the Firebase setup steps (creating a project,
+      generating a service account key, setting FCM_SERVICE_ACCOUNT_JSON).
+    verify: "test -f README.md"
+
+  - id: 24
+    phase: "Phase 8 - Polish"
+    manual: false
+    files: ["backend/src/watcher.ts", "backend/src/fcm.ts"]
+    prompt: >
+      Add basic error handling and a single retry with backoff to watcher.ts's
+      fetch/poll call and to fcm.ts's send call. Log failures; do not crash the
+      process on a single failed poll or send.
+    verify: "true"
+
+  - id: 25
+    phase: "Phase 8 - Polish"
+    manual: false
+    files: ["backend/src/index.ts"]
+    prompt: >
+      Add a GET /health endpoint to backend/src/index.ts returning 200 and a small
+      JSON status body, for uptime monitoring.
+    verify: "grep -q '/health' backend/src/index.ts"
+
+  - id: 26
+    phase: "Phase 8 - Polish"
+    manual: true
+    prompt: >
+      MANUAL STEP: review NOTES.md and resolve or explicitly hand off any remaining
+      open questions from plan.md Section 2 before wider rollout.
+    verify: "true"
