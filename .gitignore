@@ -6,3 +6,6 @@ serviceAccount*.json
 node_modules/
 .DS_Store
 app/build/outputs/
+android/keystore.properties
+*.jks
+*.keystore

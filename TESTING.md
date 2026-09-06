@@ -1,5 +1,8 @@
 # Z12 Challenge app — local testing
 
+For releasing to Google Play, see [PLAY_STORE.md](PLAY_STORE.md). The app id is
+**`com.z12.mobileapp`**, matching the existing Play listing.
+
 The app is a wrapper: the WebView loads `https://www.z12challenge.com/` directly
 (`capacitor.config.json` → `server.url`), so **none of our own JavaScript runs inside it**.
 Push registration is therefore done in native code — `MainActivity.java` on Android,
@@ -26,7 +29,9 @@ which leaves transparent corners under some launcher masks — after regeneratin
 ## Android — full end-to-end test
 
 Firebase is already wired up: `android/app/google-services.json` registers
-`com.z12challenge.app` against project `z12-website-prod`.
+`com.z12.mobileapp` against project `z12-website-prod`. (The file also still carries a
+stale client for `com.z12challenge.app` from before the rename — safe to remove in the
+Firebase console.)
 
 ### 1. Build and install
 
@@ -51,7 +56,7 @@ Then build and install:
 ```bash
 npx cap sync android
 cd android && ./gradlew installDebug && cd ..
-adb shell am start -n com.z12challenge.app/.MainActivity
+adb shell am start -n com.z12.mobileapp/.MainActivity
 ```
 
 Or open it in the IDE instead: `npx cap open android`, then Run.
@@ -177,7 +182,7 @@ unaided — **iOS push cannot be tested yet**, because:
 0. **No topic subscription.** `MainActivity` subscribes to `events` via `FirebaseMessaging`;
    iOS has no equivalent until the Firebase SDK is added (point 2), so iOS installs receive
    no event announcements even once APNs works.
-1. **No `GoogleService-Info.plist`.** Add an iOS app (bundle ID `com.z12challenge.app`) to the
+1. **No `GoogleService-Info.plist`.** Add an iOS app (bundle ID `com.z12.mobileapp`) to the
    `z12-website-prod` Firebase project, download the plist, and drag it into `ios/App/App/` in
    Xcode with "Copy items if needed" ticked. It's already in `.gitignore`.
 2. **No Firebase iOS SDK.** `@capacitor/push-notifications` on iOS returns a raw *APNs* token,
@@ -197,3 +202,17 @@ Nothing stores the token yet. `MainActivity.TOKEN_ENDPOINT` is an empty string; 
 real endpoint (and mirror it in `www/push.js`'s `TOKEN_ENDPOINT`) once one exists. A callable
 Cloud Function in `Z12website-functions` writing to a `deviceTokens` collection would be the
 natural home.
+
+## Regenerating store screenshots
+
+With the app running on an emulator, demo mode gives a clean, reproducible status bar:
+
+```bash
+adb shell settings put global sysui_demo_allowed 1
+adb shell am broadcast -a com.android.systemui.demo -e command enter
+adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 0930
+adb shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false
+adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false
+adb exec-out screencap -p > store/screenshots/01-home.png
+# ...navigate, repeat. Exit with: adb shell am broadcast -a com.android.systemui.demo -e command exit
+```

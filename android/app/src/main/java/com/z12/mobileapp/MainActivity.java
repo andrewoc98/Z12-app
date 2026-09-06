@@ -1,4 +1,4 @@
-package com.z12challenge.app;
+package com.z12.mobileapp;
 
 import android.Manifest;
 import android.app.NotificationChannel;
