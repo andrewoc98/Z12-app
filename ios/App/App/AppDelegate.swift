@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,8 +8,48 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // The WebView loads the live site (capacitor.config.json -> server.url), so none of
+        // our JavaScript runs in it. Push registration happens here instead — see MainActivity
+        // on Android for the same reasoning.
+        registerForPushNotifications(application)
         return true
+    }
+
+    private func registerForPushNotifications(_ application: UIApplication) {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+            if let error = error {
+                print("Push authorization error: \(error)")
+                return
+            }
+            guard granted else {
+                print("Push permission not granted")
+                return
+            }
+            DispatchQueue.main.async {
+                application.registerForRemoteNotifications()
+            }
+        }
+    }
+
+    func application(_ application: UIApplication,
+                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        // Hand the token to @capacitor/push-notifications so its JS listeners still work if
+        // the website ever loads www/push.js.
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications,
+                                        object: deviceToken)
+
+        // NOTE: this is the raw APNs token, not an FCM token. firebase-admin cannot address it.
+        // Sending pushes to iOS via FCM additionally needs GoogleService-Info.plist plus the
+        // Firebase iOS SDK — see TESTING.md, "iOS: what is still outstanding".
+        let apnsToken = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        print("APNs device token: \(apnsToken)")
+    }
+
+    func application(_ application: UIApplication,
+                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications,
+                                        object: error)
+        print("Push registration error: \(error)")
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

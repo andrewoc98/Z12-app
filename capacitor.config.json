@@ -8,7 +8,8 @@
     "cleartext": false,
     "allowNavigation": [
       "*.z12challenge.com"
-    ]
+    ],
+    "errorPath": "index.html"
   },
   "plugins": {
     "SplashScreen": {
@@ -18,7 +19,11 @@
       "showSpinner": false
     },
     "PushNotifications": {
-      "presentationOptions": ["badge", "sound", "alert"]
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
     }
   }
 }

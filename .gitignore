@@ -1,2 +1,8 @@
 .aider*
 android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
+*serviceAccountKey*.json
+serviceAccount*.json
+node_modules/
+.DS_Store
+app/build/outputs/

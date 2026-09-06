@@ -4,4 +4,6 @@
     <string name="title_activity_main">Z12 Challenge</string>
     <string name="package_name">com.z12challenge.app</string>
     <string name="custom_url_scheme">com.z12challenge.app</string>
+    <string name="default_notification_channel_name">Z12 Challenge updates</string>
+    <string name="default_notification_channel_description">Race updates and announcements</string>
 </resources>
