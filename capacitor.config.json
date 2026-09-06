@@ -1,0 +1,24 @@
+{
+  "appId": "com.z12challenge.app",
+  "appName": "Z12 Challenge",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://www.z12challenge.com/",
+    "cleartext": false,
+    "allowNavigation": [
+      "*.z12challenge.com"
+    ]
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "backgroundColor": "#ffffffff",
+      "showSpinner": false
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
+}
