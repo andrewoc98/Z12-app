@@ -13,18 +13,21 @@ addressed to specific people.
 `www/index.html` is now the offline fallback page (`server.errorPath`), shown when the site
 can't be reached.
 
-App icons and splash screens are generated from `Z12Logo_Black.jpg` into `assets/` and then
-into both platforms:
+App icons and splash screens are generated from `Z12Challenge.jpg` (the yellow-on-dark
+lockup) into `assets/` and then into both platforms:
 
 ```bash
 npx @capacitor/assets generate --android --ios \
-  --iconBackgroundColor '#ffffff' --iconBackgroundColorDark '#ffffff' \
-  --splashBackgroundColor '#ffffff' --splashBackgroundColorDark '#ffffff'
+  --iconBackgroundColor '#191d23' --iconBackgroundColorDark '#191d23' \
+  --splashBackgroundColor '#191d23' --splashBackgroundColorDark '#191d23'
 ```
 
 That tool rewrites `mipmap-anydpi-v26/ic_launcher*.xml` with an inset background drawable,
 which leaves transparent corners under some launcher masks — after regenerating, re-point the
 `<background>` at `@color/ic_launcher_background` as it is now.
+
+`SplashScreen.backgroundColor` in `capacitor.config.json` is `#191d23ff` to match, so the
+splash hands over to the dark site without a white flash in between.
 
 ## Android — full end-to-end test
 

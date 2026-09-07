@@ -45,7 +45,7 @@ unzip -l android/app/build/outputs/bundle/release/app-release.aab | grep -E "MET
 
 ## Store listing assets
 
-Everything in `store/` is generated from `Z12Logo_Black.jpg` and the running app:
+Everything in `store/` is generated from `Z12Challenge.jpg` and the running app:
 
 | Asset | File | Play requirement |
 |---|---|---|
@@ -57,10 +57,15 @@ Screenshots were captured from the app on an emulator with the status bar in dem
 (fixed 9:30 clock, full battery) so they look clean and reproducible. Regenerate with the
 commands in `TESTING.md` if the site's design changes.
 
-The feature graphic uses the site's own palette — `#1E1E22` ground, `#FEB959` mark — sampled
-from the live page rather than guessed. Note the app icon is deliberately the **black-on-white**
-mark you asked for, while the site and feature graphic are yellow-on-dark; if you'd rather the
-launcher icon matched the site, say so and I'll regenerate it.
+All of it comes from the `Z12Challenge.jpg` lockup — `#191D23` ground, `#F6AC42` mark, both
+sampled from the file rather than guessed — so the icon, splash, store graphics and the site
+itself are one palette.
+
+The launcher and store icons use the **Z12 mark alone**, not the full lockup: "CHALLENGE" sits
+at about a fifth of the artwork's height, which is legible on the splash and feature graphic
+but turns to mush at a 48dp launcher icon. The splash and feature graphic use the full lockup.
+To use the full lockup everywhere instead, change `MARK` to `LOCKUP` in the asset generation
+and re-run `@capacitor/assets`.
 
 ## Data safety and privacy
 
