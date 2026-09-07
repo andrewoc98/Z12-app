@@ -12,6 +12,9 @@ release**. A new key is rejected — there is no way around this from the code s
 
 - If you have it: copy `android/keystore.properties.example` to `android/keystore.properties`,
   fill in the path and passwords. Both are gitignored, along with `*.jks` / `*.keystore`.
+- **The app is already in closed testing, which means a bundle has already been signed and
+  uploaded with this key.** Whoever did that upload has it, or had it — that's the fastest
+  lead, much faster than hunting the filesystem.
 - If it's lost: Play Console → Setup → App signing → **Request upload key reset**. This only
   works if the app is enrolled in Play App Signing. If it isn't, the listing cannot be updated
   at all and you'd need a new one under a different package name.
@@ -22,9 +25,12 @@ I inferred `com.z12.mobileapp` from the second Android client in your Firebase p
 it against Play Console → the live app → App information, because **a listing's package name
 can never change**. If it differs, tell me and I'll redo the rename.
 
-`versionCode` is currently **2**. It must be strictly greater than the live release's — read
-that from Play Console → Release → Production, and bump `android/app/build.gradle` if needed.
-Play rejects the upload outright if it's too low, so the failure is loud, not silent.
+`versionCode` is currently **2**. It must be strictly greater than **the highest versionCode
+ever uploaded to any track** — not just production. The app is currently in closed testing, so
+check Play Console → Release → **Releases overview**, which lists every track (internal,
+closed, open, production) and the version in each. Take the highest, add one, and set it in
+`android/app/build.gradle`. Play rejects a duplicate or lower one outright, so the failure is
+loud rather than silent.
 
 ## Build the release
 
@@ -66,6 +72,17 @@ at about a fifth of the artwork's height, which is legible on the splash and fea
 but turns to mush at a 48dp launcher icon. The splash and feature graphic use the full lockup.
 To use the full lockup everywhere instead, change `MARK` to `LOCKUP` in the asset generation
 and re-run `@capacitor/assets`.
+
+## Changing the store listing name
+
+The name on the phone (`app_name` in `strings.xml`, `CFBundleDisplayName` on iOS) and the name
+in the Play listing are separate fields. Both currently read "Z12 Challenge"; the phone one is
+in this repo, the store one is not.
+
+To change the store name: Play Console → your app → **Grow → Main store listing → App name**
+(30 characters max), then Save. It applies to the listing testers and users see, needs no new
+bundle, and does not touch `applicationId`. Store listing edits go through review, so expect a
+short delay before it shows.
 
 ## Data safety and privacy
 
